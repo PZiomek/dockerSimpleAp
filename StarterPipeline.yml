@@ -1,0 +1,46 @@
+stages:
+
+- stage: BuildServices
+
+  pool:
+    vmImage: ubuntu-latest
+  jobs:
+  - job: BuildDocker_SalesBookLB
+    displayName: Build Docker Image For SalesBookLB app
+    steps:
+    - task: Docker@2
+      inputs:
+        containerRegistry: 'ContRegMultiStagePPLSvcConnection'
+        repository: 'SalesBookLB'
+        command: 'buildAndPush'
+        Dockerfile: '**/SalesBook.LB/Dockerfile'
+        tags: |
+          $(Build.BuildId)
+          latest
+  - job: BuildDocker_SalesBookWEB
+    displayName: Build Docker Image For SalesBookWEB app
+    steps:
+    - task: Docker@2
+      inputs:
+        containerRegistry: 'ContRegMultiStagePPLSvcConnection'
+        repository: 'SalesBookWEB'
+        command: 'buildAndPush'
+        Dockerfile: '**/SalesBook.WEB/Dockerfile'
+        tags: |
+          $(Build.BuildId)
+          latest
+
+- stage: DeployToAKS
+  pool:
+    vmImage: ubuntu-latest
+  
+  jobs:
+  - job: DepolyToAKS
+    displayName: Deploy To AKS
+    steps:
+    - task: KubernetesManifest@1
+      inputs:
+        action: 'deploy'
+        connectionType: 'kubernetesServiceConnection'
+        kubernetesServiceConnection: 'MultiStagePPLKubeSvcConnection'
+        manifests: '**/AKS/deployment.yaml'
